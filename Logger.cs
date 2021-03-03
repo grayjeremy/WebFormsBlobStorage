@@ -13,6 +13,20 @@ namespace WebFormsBlobStorage
 {
     public static class Logger
     {
+        internal static void AddLog(Exception ex, string empty)
+        {
+            byte[] byteArray = Encoding.ASCII.GetBytes(ex.Message);
+            string fileName = Guid.NewGuid().ToString() + ".txt";
+            string storageAccountName = ConfigurationManager.AppSettings["storageAccountName"].ToString();
+            string storageContainerName = ConfigurationManager.AppSettings["storageContainerName"].ToString();
+
+            using (MemoryStream stream = new MemoryStream(byteArray))
+            {
+
+                StreamToCloudStorageAsync(storageAccountName, storageContainerName, stream, fileName).GetAwaiter().GetResult();
+
+            }
+        }
 
         async static Task StreamToCloudStorageAsync(string accountName, string containerName, Stream sourceStream, string destinationFileName, bool overwrite = true, Dictionary<string, string> destinationFileMetadata = null)
         {
@@ -24,47 +38,21 @@ namespace WebFormsBlobStorage
             // Get a credential and create a client object for the blob container.
             BlobContainerClient containerClient = new BlobContainerClient(new Uri(containerEndpoint), new DefaultAzureCredential());
 
+            // Create the container if it does not exist.
+            await containerClient.CreateIfNotExistsAsync();
 
-            try
+            var blobClient = containerClient.GetBlobClient(destinationFileName);
+
+            // Upload text to a new block blob.
+            var blob = await blobClient.UploadAsync(sourceStream, overwrite);
+            //await containerClient.UploadBlobAsync(destinationFileName, sourceStream);      
+
+            if (null != destinationFileMetadata)
             {
-                // Create the container if it does not exist.
-                await containerClient.CreateIfNotExistsAsync();
-
-                var blobClient = containerClient.GetBlobClient(destinationFileName);
-
-                // Upload text to a new block blob.
-                var blob = await blobClient.UploadAsync(sourceStream, overwrite);
-                //await containerClient.UploadBlobAsync(destinationFileName, sourceStream);      
-
-                if (null != destinationFileMetadata)
-                {
-                    blobClient.SetMetadata(destinationFileMetadata);
-                }
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(containerEndpoint);
-                Console.WriteLine(destinationFileName);
-                Console.WriteLine(e.Message);
-                Console.ReadLine();
-                throw;
+                blobClient.SetMetadata(destinationFileMetadata);
             }
         }
 
-        internal static void AddLog(Exception ex, string empty)
-        {
-            byte[] byteArray = Encoding.ASCII.GetBytes(ex.Message);
-            string fileName = Guid.NewGuid().ToString() + ".txt";
-            string storageAccountName = ConfigurationManager.AppSettings["storageAccountName"].ToString();
-            string storageContainerName = ConfigurationManager.AppSettings["storageContainerName"].ToString();
-
-            using (MemoryStream stream = new MemoryStream(byteArray))
-            {
-                
-                StreamToCloudStorageAsync(storageAccountName, storageContainerName, stream, fileName).GetAwaiter().GetResult();
-
-            }
-        }
+        
     }
 }
