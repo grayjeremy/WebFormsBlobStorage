@@ -28,7 +28,7 @@ namespace WebFormsBlobStorage
             }
         }
 
-        async static Task StreamToCloudStorageAsync(string accountName, string containerName, Stream sourceStream, string destinationFileName, bool overwrite = true, Dictionary<string, string> destinationFileMetadata = null)
+        async static Task StreamToCloudStorageAsync(string accountName, string containerName, Stream sourceStream, string destinationFileName)
         {
             // Construct the blob container endpoint from the arguments.
             string containerEndpoint = string.Format("https://{0}.blob.core.windows.net/{1}",
@@ -44,13 +44,7 @@ namespace WebFormsBlobStorage
             var blobClient = containerClient.GetBlobClient(destinationFileName);
 
             // Upload text to a new block blob.
-            var blob = await blobClient.UploadAsync(sourceStream, overwrite);
-            //await containerClient.UploadBlobAsync(destinationFileName, sourceStream);      
-
-            if (null != destinationFileMetadata)
-            {
-                blobClient.SetMetadata(destinationFileMetadata);
-            }
+            var blob = await blobClient.UploadAsync(sourceStream);
         }
 
         
